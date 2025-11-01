@@ -1,9 +1,16 @@
 services:
-  - name: backend
-    type: web
+  - type: web
+    name: backend
     env: python
-    buildCommand: |
-      apt-get update
-      apt-get install -y ffmpeg libavcodec-dev libavformat-dev libavdevice-dev libavutil-dev libavfilter-dev libswscale-dev libswresample-dev
-      pip install -r requirements.txt
-    startCommand: python backend-main.py
+    buildCommand: pip install -r requirements.txt
+    startCommand: uvicorn main:app --host 0.0.0.0 --port $PORT
+    nixpacks:
+      packages:
+        - ffmpeg
+        - libavcodec-dev
+        - libavformat-dev
+        - libavdevice-dev
+        - libavutil-dev
+        - libavfilter-dev
+        - libswscale-dev
+        - libswresample-dev
