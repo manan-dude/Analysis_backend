@@ -26,12 +26,12 @@ from pydantic import BaseModel
 from google import genai
 from dotenv import load_dotenv
 from langchain_text_splitters import RecursiveCharacterTextSplitter
-# try:
-#     import ffmpeg
-#     from faster_whisper import WhisperModel
-# except ImportError:
-#     ffmpeg = None
-#     WhisperModel = None
+try:
+    import ffmpeg
+    from faster_whisper import WhisperModel
+except ImportError:
+    ffmpeg = None
+    WhisperModel = None
 
 # =========================================================================
 # Logging Configuration
@@ -196,44 +196,44 @@ def analyze_competitor(company_identifier: str) -> Dict[str, Any]:
         raise HTTPException(status_code=500, detail=f"Competitor analysis failed: {str(e)}")
 
 # Initialize Whisper model (will download on first run)
-# whisper_model = None
-# if WhisperModel:
-#     try:
-#         whisper_model = WhisperModel("base", device="cpu", compute_type="int8")
-#         logger.info("✅ Whisper model initialized successfully")
-#     except Exception as e:
-#         logger.warning(f"⚠️ Failed to initialize Whisper model: {e}")
+whisper_model = None
+if WhisperModel:
+    try:
+        whisper_model = WhisperModel("base", device="cpu", compute_type="int8")
+        logger.info("✅ Whisper model initialized successfully")
+    except Exception as e:
+        logger.warning(f"⚠️ Failed to initialize Whisper model: {e}")
 
 # =========================================================================
 # Helper Functions for Video Upload
 # =========================================================================
 
-# async def extract_audio_from_video(video_path: str, audio_path: str) -> bool:
-#     """Extract audio from video file using FFmpeg."""
-#     try:
-#         await asyncio.to_thread(
-#             lambda: ffmpeg.input(video_path)
-#             .output(audio_path, acodec="mp3", ac=1, ar=16000)
-#             .overwrite_output()
-#             .run(capture_stdout=True, capture_stderr=True)
-#         )
-#         return True
-#     except Exception as e:
-#         logger.error(f"FFmpeg extraction failed: {e}")
-#         return False
+async def extract_audio_from_video(video_path: str, audio_path: str) -> bool:
+    """Extract audio from video file using FFmpeg."""
+    try:
+        await asyncio.to_thread(
+            lambda: ffmpeg.input(video_path)
+            .output(audio_path, acodec="mp3", ac=1, ar=16000)
+            .overwrite_output()
+            .run(capture_stdout=True, capture_stderr=True)
+        )
+        return True
+    except Exception as e:
+        logger.error(f"FFmpeg extraction failed: {e}")
+        return False
 
-# async def transcribe_audio(audio_path: str) -> str:
-#     """Transcribe audio file using Faster-Whisper."""
-#     try:
-#         segments, info = await asyncio.to_thread(
-#             whisper_model.transcribe,
-#             audio_path,
-#             language="en"
-#         )
-#         return " ".join([seg.text for seg in segments])
-#     except Exception as e:
-#         logger.error(f"Transcription failed: {e}")
-#         raise
+async def transcribe_audio(audio_path: str) -> str:
+    """Transcribe audio file using Faster-Whisper."""
+    try:
+        segments, info = await asyncio.to_thread(
+            whisper_model.transcribe,
+            audio_path,
+            language="en"
+        )
+        return " ".join([seg.text for seg in segments])
+    except Exception as e:
+        logger.error(f"Transcription failed: {e}")
+        raise
 
 def cleanup_files(*file_paths):
     """Clean up temporary files."""
@@ -375,131 +375,131 @@ def cleanup_files(*file_paths):
 #             except Exception:
 #                 pass
 
-# @app.post("/api/video-pitch/upload")
-# async def analyze_uploaded_video(file: UploadFile = File(...)):
-#     """Process uploaded video: extract audio, transcribe, and analyze."""
+@app.post("/api/video-pitch/upload")
+async def analyze_uploaded_video(file: UploadFile = File(...)):
+    """Process uploaded video: extract audio, transcribe, and analyze."""
     
-#     logger.info("="*70)
-#     logger.info("📤 VIDEO UPLOAD ANALYSIS REQUEST")
+    logger.info("="*70)
+    logger.info("📤 VIDEO UPLOAD ANALYSIS REQUEST")
     
-#     if not ffmpeg or not whisper_model:
-#         return JSONResponse(
-#             status_code=503,
-#             content={"success": False, "error": "Video upload dependencies not installed. Run: pip install ffmpeg-python faster-whisper"}
-#         )
+    if not ffmpeg or not whisper_model:
+        return JSONResponse(
+            status_code=503,
+            content={"success": False, "error": "Video upload dependencies not installed. Run: pip install ffmpeg-python faster-whisper"}
+        )
 
-#     file_id = str(uuid.uuid4())
-#     video_path = os.path.join(UPLOAD_DIR, f"{file_id}.mp4")
-#     audio_path = os.path.join(UPLOAD_DIR, f"{file_id}.mp3")
+    file_id = str(uuid.uuid4())
+    video_path = os.path.join(UPLOAD_DIR, f"{file_id}.mp4")
+    audio_path = os.path.join(UPLOAD_DIR, f"{file_id}.mp3")
     
-#     try:
-#         # 1. Save uploaded video
-#         with open(video_path, "wb") as f:
-#             f.write(await file.read())
+    try:
+        # 1. Save uploaded video
+        with open(video_path, "wb") as f:
+            f.write(await file.read())
         
-#         # 2. Extract audio
-#         if not await extract_audio_from_video(video_path, audio_path):
-#             raise Exception("Failed to extract audio from video")
+        # 2. Extract audio
+        if not await extract_audio_from_video(video_path, audio_path):
+            raise Exception("Failed to extract audio from video")
             
-#         # 3. Transcribe audio
-#         transcript = await transcribe_audio(audio_path)
-#         print("transcript:", transcript)
+        # 3. Transcribe audio
+        transcript = await transcribe_audio(audio_path)
+        print("transcript:", transcript)
         
-#         # 4. Analyze with Gemini
-#         analysis_prompt = f"""
-# You are an expert pitch analyst. Analyze the following video transcript from a pitch presentation.
+        # 4. Analyze with Gemini
+        analysis_prompt = f"""
+You are an expert pitch analyst. Analyze the following video transcript from a pitch presentation.
 
-# TRANSCRIPT:
-# ---
-# {transcript[:15000]}  # Limit to avoid token limits
-# ---
+TRANSCRIPT:
+---
+{transcript[:15000]}  # Limit to avoid token limits
+---
 
-# Provide a comprehensive analysis in the following JSON format:
+Provide a comprehensive analysis in the following JSON format:
 
-# {{
-#     "video_title": "Extract or infer the pitch/company name",
-#     "duration": "Estimate duration from transcript",
-#     "channel": "Speaker/Company name if mentioned",
-#     "executive_summary": "2-3 sentence overview of the pitch",
-#     "key_insights": [
-#         "First major insight",
-#         "Second major insight",
-#         "Third major insight",
-#         "Fourth major insight",
-#         "Fifth major insight"
-#     ],
-#     "main_points": [
-#         "First main point from the pitch",
-#         "Second main point",
-#         "Third main point",
-#         "Fourth main point"
-#     ],
-#     "notable_slides": [
-#         {{
-#             "timestamp": "0:45",
-#             "description": "Problem statement slide - described the market gap"
-#         }},
-#         {{
-#             "timestamp": "2:30",
-#             "description": "Solution overview - demonstrated the product"
-#         }},
-#         {{
-#             "timestamp": "5:15",
-#             "description": "Business model - explained revenue streams"
-#         }},
-#         {{
-#             "timestamp": "7:20",
-#             "description": "Traction metrics - showed growth numbers"
-#         }}
-#     ],
-#     "action_items": [
-#         "First recommendation or action item",
-#         "Second recommendation",
-#         "Third recommendation"
-#     ]
-# }}
+{{
+    "video_title": "Extract or infer the pitch/company name",
+    "duration": "Estimate duration from transcript",
+    "channel": "Speaker/Company name if mentioned",
+    "executive_summary": "2-3 sentence overview of the pitch",
+    "key_insights": [
+        "First major insight",
+        "Second major insight",
+        "Third major insight",
+        "Fourth major insight",
+        "Fifth major insight"
+    ],
+    "main_points": [
+        "First main point from the pitch",
+        "Second main point",
+        "Third main point",
+        "Fourth main point"
+    ],
+    "notable_slides": [
+        {{
+            "timestamp": "0:45",
+            "description": "Problem statement slide - described the market gap"
+        }},
+        {{
+            "timestamp": "2:30",
+            "description": "Solution overview - demonstrated the product"
+        }},
+        {{
+            "timestamp": "5:15",
+            "description": "Business model - explained revenue streams"
+        }},
+        {{
+            "timestamp": "7:20",
+            "description": "Traction metrics - showed growth numbers"
+        }}
+    ],
+    "action_items": [
+        "First recommendation or action item",
+        "Second recommendation",
+        "Third recommendation"
+    ]
+}}
 
-# Focus on business insights, problem-solution fit, market opportunity, competitive advantages, and traction indicators.
-# Output ONLY the JSON, no additional text.
-# """
+Focus on business insights, problem-solution fit, market opportunity, competitive advantages, and traction indicators.
+Output ONLY the JSON, no additional text.
+"""
         
     
-#         response = client.models.generate_content(
-#             model=GENERATIVE_MODEL,
-#             contents=analysis_prompt,
-#         )
-#         # 4. Correctly Parse the Response
-#         try:
-#             raw_text = response.candidates[0].content.parts[0].text
-#             json_text = raw_text.strip()
-#             if json_text.startswith("```"):
-#                 json_text = json_text[7:]
-#             if json_text.endswith("```"):
-#                 json_text = json_text[:-3]
+        response = client.models.generate_content(
+            model=GENERATIVE_MODEL,
+            contents=analysis_prompt,
+        )
+        # 4. Correctly Parse the Response
+        try:
+            raw_text = response.candidates[0].content.parts[0].text
+            json_text = raw_text.strip()
+            if json_text.startswith("```"):
+                json_text = json_text[7:]
+            if json_text.endswith("```"):
+                json_text = json_text[:-3]
             
-#             analysis_data = json.loads(json_text.strip())
+            analysis_data = json.loads(json_text.strip())
             
-#         except (IndexError, AttributeError, json.JSONDecodeError) as e:
-#             logger.error(f"❌ Failed to parse JSON from Gemini: {e}")
-#             raise Exception("Failed to parse AI analysis response.")
+        except (IndexError, AttributeError, json.JSONDecodeError) as e:
+            logger.error(f"❌ Failed to parse JSON from Gemini: {e}")
+            raise Exception("Failed to parse AI analysis response.")
         
-#         # 5. Add Metadata
-#         analysis_data['source'] = 'uploaded_video'
-#         analysis_data['filename'] = file.filename
+        # 5. Add Metadata
+        analysis_data['source'] = 'uploaded_video'
+        analysis_data['filename'] = file.filename
         
-#         # 6. Return Correctly Formatted JSON
-#         return JSONResponse(content={
-#             "success": True,
-#             "data": analysis_data
-#         })
+        # 6. Return Correctly Formatted JSON
+        return JSONResponse(content={
+            "success": True,
+            "data": analysis_data
+        })
     
-#     except Exception as e:
-#         logger.error(f"❌ Video upload analysis failed: {e}")
-#         return JSONResponse(status_code=500, content={"success": False, "error": str(e)})
+    except Exception as e:
+        logger.error(f"❌ Video upload analysis failed: {e}")
+        return JSONResponse(status_code=500, content={"success": False, "error": str(e)})
     
-#     finally:
-#         # 7. Cleanup Files
-#         cleanup_files(video_path, audio_path)
+    finally:
+        # 7. Cleanup Files
+        cleanup_files(video_path, audio_path)
 # =========================================================================
 # Helper Functions - RAG Analysis
 # =========================================================================
@@ -869,27 +869,56 @@ def generate_document_analysis(extracted_data: List[Dict[str, Any]], pages_analy
     logger.info(f"📊 Summary: {total_tables} tables, {total_plots} plots from {pages_analyzed} pages")
     
     # Generate AI analysis
+    # Generate AI analysis
     analysis_prompt = f"""
-    Based on a document analysis that extracted {total_tables} tables and {total_plots} plots from {pages_analyzed} pages,
-    provide a comprehensive analysis summary in JSON format:
-    
-    {{
-        "key_insights": ["insight1", "insight2", "insight3", "insight4", "insight5"],
-        "financial_metrics": {{
-            "revenue_trends": "Analysis of revenue patterns",
-            "profit_margins": "Profit margin insights",
-            "growth_rates": "Growth rate analysis",
-            "kpis": "Key performance indicators"
-        }},
-        "visual_analysis": {{
-            "chart_types": "Types of charts identified",
-            "completeness_score": "8/10",
-            "quality_assessment": "Data quality evaluation"
-        }},
-        "recommendations": ["recommendation1", "recommendation2", "recommendation3"],
-        "risk_factors": ["risk1", "risk2"]
-    }}
-    """
+You are a senior financial analyst. A document was analyzed and extracted:
+- {total_tables} data tables
+- {total_plots} charts/graphs
+- from {pages_analyzed} total pages.
+
+Using this context, generate a **professional investment-focused report**.
+
+✅ Your task:
+Provide insights as if you reviewed a full company financial report and are advising an investor:
+- explain revenue trends
+- profitability direction
+- risks
+- future outlook
+- whether the company is a good investment
+- why or why not
+
+✅ Output STRICTLY in JSON (no explanation outside JSON).  
+✅ Follow this exact structure:
+
+{{
+    "key_insights": [
+        "Clear, sharp insights about the company's performance and future",
+        "Investment-focused observations, not description of extracted tables"
+    ],
+    "financial_metrics": {{
+        "revenue_trends": "Explain long-term revenue performance and whether growth is accelerating or slowing",
+        "profit_margins": "Are margins improving? stable? declining?",
+        "growth_rates": "Is the company growing fast? moderately? stagnating?",
+        "kpis": "Key KPIs relevant for investors (ROE, ROA, CAC, LTV, etc.)"
+    }},
+    "visual_analysis": {{
+        "chart_types": "What types of charts typically represent such financial data (trend lines, YoY bars, pie charts)",
+        "completeness_score": "Rate perceived completeness of financial visuals (1–10)",
+        "quality_assessment": "Interpret if the underlying data looks strong, weak, volatile, or stable"
+    }},
+    "recommendations": [
+        "Clear investment recommendation (Buy/Hold/Sell)",
+        "Why this recommendation is justified",
+        "Actionable strategic suggestion for investors"
+    ],
+    "risk_factors": [
+        "Major risks like market volatility, competition, debt, declining demand, etc.",
+        "Any warning signs investors must consider"
+    ]
+}}
+
+Make the insights **specific, realistic, investment oriented**, and **not generic**.
+"""
     
     try:
         logger.info("🤖 Generating AI analysis summary...")
